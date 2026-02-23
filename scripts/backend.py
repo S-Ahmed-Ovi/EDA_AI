@@ -1,4 +1,5 @@
 import sys
+import json
 import os
 import pandas as pd
 import io
@@ -40,7 +41,7 @@ async def clean_data(file: UploadFile = File(...), missing_value_strategy: str =
             raise HTTPException(status_code=400, detail="Unsupported file format. Please upload a CSV or Excel file.") 
 
         #step 1: Clean the data using the DataCleaning class
-        cleaned_df = data_cleaning.clean_data(df, missing_value_strategy, outlier_column, irrelevant_columns.split(',') if irrelevant_columns else None, categorical_column, eval(data_type_fixes) if data_type_fixes else None)       
+        cleaned_df = data_cleaning.clean_data(df, missing_value_strategy, outlier_column, irrelevant_columns.split(',') if irrelevant_columns else None, categorical_column, json.loads(data_type_fixes) if data_type_fixes else None)       
 
         #step 2: AI Agent Cleaning
         ai_cleaned_df = ai_agent.clean_data(cleaned_df)
