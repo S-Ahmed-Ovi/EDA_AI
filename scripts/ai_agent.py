@@ -1,8 +1,10 @@
+from click import prompt
 import pandas as pd
 from langgraph.graph import StateGraph, START, END
 from pydantic import BaseModel
 import ollama
-
+import json
+import ast
 
 
 class CleaningState(BaseModel):
@@ -16,7 +18,7 @@ class AIAgent:
 
     def create_graph(self):
         graph = StateGraph(CleaningState)
-        
+
         def agent_logic(state: CleaningState) -> CleaningState:
             # Call the clean_data function and update the state
             response = ollama.chat(
@@ -42,10 +44,10 @@ class AIAgent:
 
         # Define the cleaning node
         graph.add_node("clean_data", agent_logic)
-        
+
         # Connect the nodes
         graph.add_edge("clean_data", END)
-        
+
         # Set entry point
         graph.set_entry_point("clean_data")
 
@@ -55,37 +57,49 @@ class AIAgent:
         # Convert batch to string (important)
         batch_text = batch_df.to_string()
 
-        prompt = f"""
-        You are an AI Data Cleaning Agent for machine learning.
+        prompt_text = f"""
+You are an AI Data Cleaning Agent.
 
-        Analyze the following dataset batch:
+Analyze the dataset below and return ONLY valid JSON.
+Do not add explanations, notes, or markdown.
+Return strictly JSON.
 
-        {batch_text}
+Dataset:
+{batch_text}
 
-        Tasks:
-        1. Detect missing values
-        2. Detect inconsistent formats
-        3. Suggest cleaning techniques
-        4. Return cleaned data in structured format
+Return format:
+{{
+    "issues_found": [],
+    "cleaning_strategy": [],
+    "cleaned_data": [
+        {{"column1": "value1", "column2": "value2"}}
+    ]
+}}
+"""
 
-        Output format:
-        - Issues Found:
-        - Cleaning Strategy:
-        - Cleaned Data:
-        """
-
-        state = CleaningState(input_text=prompt, structured_response="")
+        state = CleaningState(input_text=prompt_text, structured_response="")
         response = self.graph.invoke(state)
 
-        # If graph returns CleaningState object
+        # Extract actual AI text from response
+        ai_text = ""
         if isinstance(response, CleaningState):
-            return response.structured_response
+            ai_text = response.structured_response
+        elif isinstance(response, dict):
+            ai_text = response.get("structured_response", "")
+        else:
+            ai_text = str(response)
 
-        # If graph returns dict
-        if isinstance(response, dict):
-            return response.get("structured_response", "")
+        # Parse JSON safely
+        try:
+            ai_json = json.loads(ai_text)
+        except json.JSONDecodeError:
+            try:
+                ai_json = ast.literal_eval(ai_text)
+            except Exception:
+                # Fallback empty structure if parsing fails
+                ai_json = {"issues_found": [], "cleaning_strategy": [], "cleaned_data": []}
 
-        return str(response)
+        return ai_json
 
     def clean_data(self, df, batch_size=20):
         cleaned_results = []
@@ -95,4 +109,4 @@ class AIAgent:
             cleaned_batch = self._clean_batch(batch)
             cleaned_results.append(cleaned_batch)
 
-        return "\n\n".join(cleaned_results)
+        return cleaned_results  # return list of dicts for easier handling in Streamlit
