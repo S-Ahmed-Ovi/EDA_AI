@@ -32,9 +32,8 @@ data_source = st.sidebar.selectbox(
     index=0
 )
 
-# ------------------------------
+
 # Helper function to call backend
-# ------------------------------
 @st.cache_data(show_spinner=False)
 def clean_backend(file=None, db_payload=None, api_payload=None, endpoint="clean-data/"):
     try:
@@ -57,9 +56,8 @@ def clean_backend(file=None, db_payload=None, api_payload=None, endpoint="clean-
         st.error(f"Request failed: {e}")
         return None
 
-# ------------------------------
+
 # CSV / Excel File Upload
-# ------------------------------
 if data_source in ["CSV File", "Excel File"]:
     st.subheader(f"Upload a {data_source}")
     uploaded_file = st.file_uploader(f"Upload a {data_source}", type=["csv", "xlsx", "xls"])
@@ -148,9 +146,8 @@ if data_source in ["CSV File", "Excel File"]:
                 else:
                     st.error("AI cleaned data is empty.")
 
-# ------------------------------
+
 # Database Query
-# ------------------------------
 elif data_source == "Database":
     st.subheader("Enter Database Connection Details")
     db_url = st.text_input("Database URL (e.g., postgresql://user:pass@host:port/dbname)")
@@ -186,9 +183,8 @@ elif data_source == "Database":
                     else:
                         st.error("Cleaned data is empty.")
 
-# ------------------------------
+
 # API Data Input
-# ------------------------------
 elif data_source == "API":
     st.subheader("Enter API Details")
     api_url = st.text_input("API URL")
